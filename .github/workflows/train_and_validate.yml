@@ -1,0 +1,36 @@
+name: Train and Validate
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  train-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Airflow constraints install (matches local approach)
+          AIRFLOW_VERSION=2.9.3
+          PYTHON_VERSION=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+          CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+          pip install "apache-airflow==${AIRFLOW_VERSION}" --constraint "${CONSTRAINT_URL}"
+          pip install -r requirements.txt
+
+      - name: Train
+        run: |
+          python train.py --experiment-name milestone3 --run-name "ci_run"
+
+      - name: Validate (quality gate)
+        run: |
+          python model_validation.py --metrics-path artifacts/metrics.json --min-accuracy 0.80
