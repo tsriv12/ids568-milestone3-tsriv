@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import hashlib
 import os
 from pathlib import Path
 
@@ -21,6 +22,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import joblib
+
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def parse_args():
@@ -59,6 +69,10 @@ def main():
     metrics_path = out_dir / "metrics.json"
     metrics_path.write_text(json.dumps({"accuracy": acc}, indent=2))
 
+    # Compute artifact hashes for reproducibility
+    model_sha256 = sha256_file(model_path)
+    metrics_sha256 = sha256_file(metrics_path)
+
     # MLflow logging
     mlflow.set_experiment(args.experiment_name)
     with mlflow.start_run(run_name=args.run_name):
@@ -70,6 +84,10 @@ def main():
 
         mlflow.log_artifact(str(model_path))
         mlflow.log_artifact(str(metrics_path))
+
+        # Log artifact hashes as tags (checklist requirement)
+        mlflow.set_tag("artifact_sha256_model_joblib", model_sha256)
+        mlflow.set_tag("artifact_sha256_metrics_json", metrics_sha256)
 
         # Print key outputs for Airflow/CI logs
         print(f"val_accuracy={acc}")
