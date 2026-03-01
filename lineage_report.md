@@ -18,6 +18,10 @@ A comparison table of runs is included in: `run_comparison.csv`.
 
 ## 3) Candidate selection
 The production candidate was selected using:
+- Selected **run_id**: `3b329cd608f94e2a904c412b8bda9d61`
+- Selected **val_accuracy**: `1.0`
+- Selected hyperparameters: `C=5.0`, `max_iter=200`, `seed=42`
+
 - Primary criterion: **highest validation accuracy (`val_accuracy`)**
 - Gate: validation must meet or exceed the minimum threshold enforced by `model_validation.py`
 
@@ -26,6 +30,7 @@ Registered Model: **milestone3_model**
 
 Stage progression performed for Version 1:
 - **None → Staging → Production**
+- Production version: **v1**
 
 Rationale:
 - The selected run achieved the best validation performance among the tracked runs and passed the validation gate.
