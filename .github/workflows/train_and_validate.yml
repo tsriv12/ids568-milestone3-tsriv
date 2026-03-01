@@ -29,8 +29,7 @@ jobs:
 
       - name: Train
         run: |
-          python train.py --experiment-name milestone3 --run-name "ci_run"
-
-      - name: Validate (quality gate)
+          python train.py --experiment-name milestone3 --run-name "ci_run" --output-dir artifacts/ci_run
+- name: Validate (quality gate)
         run: |
-          python model_validation.py --metrics-path artifacts/metrics.json --min-accuracy 0.80
+          python model_validation.py --metrics-path artifacts/ci_run/metrics.json --min-accuracy 0.80
