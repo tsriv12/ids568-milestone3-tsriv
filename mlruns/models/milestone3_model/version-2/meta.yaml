@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1772389238945
+current_stage: Production
+description: null
+last_updated_timestamp: 1772389238955
+name: milestone3_model
+run_id: 3b329cd608f94e2a904c412b8bda9d61
+run_link: null
+source: file:///home/extramural_cl_000647/ids568-milestone3-tsriv/mlruns/298360753103086223/3b329cd608f94e2a904c412b8bda9d61/artifacts/model.joblib
+status: READY
+status_message: null
+storage_location: file:///home/extramural_cl_000647/ids568-milestone3-tsriv/mlruns/298360753103086223/3b329cd608f94e2a904c412b8bda9d61/artifacts/model.joblib
+user_id: null
+version: 2

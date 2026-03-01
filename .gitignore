@@ -20,7 +20,6 @@ logs/
 webserver_config.py
 
 # MLflow local state (if you store locally)
-mlruns/
 mlartifacts/
 
 # OS/editor

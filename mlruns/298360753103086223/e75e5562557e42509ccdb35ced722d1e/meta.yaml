@@ -1,0 +1,15 @@
+artifact_uri: file:///home/extramural_cl_000647/ids568-milestone3-tsriv/mlruns/298360753103086223/e75e5562557e42509ccdb35ced722d1e/artifacts
+end_time: 1772386377570
+entry_point_name: ''
+experiment_id: '298360753103086223'
+lifecycle_stage: active
+run_id: e75e5562557e42509ccdb35ced722d1e
+run_name: baseline_C1
+run_uuid: e75e5562557e42509ccdb35ced722d1e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772386377557
+status: 3
+tags: []
+user_id: extramural_cl_000647

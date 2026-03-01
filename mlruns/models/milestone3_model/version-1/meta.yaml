@@ -1,0 +1,15 @@
+aliases: []
+creation_timestamp: 1772387440297
+current_stage: Production
+description: Promoted to Production after passing validation threshold and registry
+  review.
+last_updated_timestamp: 1772387502059
+name: milestone3_model
+run_id: 3b329cd608f94e2a904c412b8bda9d61
+run_link: null
+source: runs:/3b329cd608f94e2a904c412b8bda9d61/model.joblib
+status: READY
+status_message: null
+storage_location: runs:/3b329cd608f94e2a904c412b8bda9d61/model.joblib
+user_id: null
+version: 1

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/extramural_cl_000647/ids568-milestone3-tsriv/mlruns/298360753103086223/3f51f05d2765495a91b83006cc28ebfb/artifacts
+end_time: 1772389232948
+entry_point_name: ''
+experiment_id: '298360753103086223'
+lifecycle_stage: active
+run_id: 3f51f05d2765495a91b83006cc28ebfb
+run_name: airflow_run
+run_uuid: 3f51f05d2765495a91b83006cc28ebfb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772389232932
+status: 3
+tags: []
+user_id: extramural_cl_000647
