@@ -92,6 +92,7 @@ def main():
         # Print key outputs for Airflow/CI logs
         print(f"val_accuracy={acc}")
         print(f"model_path={model_path.resolve()}")
+        print(f"metrics_path={metrics_path.resolve()}")
 
 
 if __name__ == "__main__":

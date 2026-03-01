@@ -37,7 +37,7 @@ def train_model(**kwargs):
     Calls train.py. Idempotency: overwrites artifacts/ for this run.
     """
     env = os.environ.copy()
-    cmd = ["python", os.path.join(REPO_ROOT, "train.py"), "--experiment-name", "milestone3", "--run-name", "airflow_run"]
+    cmd = ["python", os.path.join(REPO_ROOT, "train.py"), "--experiment-name", "milestone3", "--run-name", "airflow_run", "--output-dir", f"artifacts/{kwargs.get('run_id', 'airflow')}" ]
     logging.info("Running: %s", " ".join(cmd))
     subprocess.run(cmd, cwd=REPO_ROOT, env=env, check=True)
 
@@ -48,7 +48,7 @@ def register_model(**kwargs):
     For simplicity, we register the last run that 'train.py' created via MLflow search.
     """
     # 1) quality gate (fails task if below threshold)
-    cmd_val = ["python", os.path.join(REPO_ROOT, "model_validation.py"), "--metrics-path", "artifacts/metrics.json", "--min-accuracy", "0.80"]
+    cmd_val = ["python", os.path.join(REPO_ROOT, "model_validation.py"), "--metrics-path", f"artifacts/{kwargs.get('run_id', 'airflow')}/metrics.json", "--min-accuracy", "0.80"]
     logging.info("Running: %s", " ".join(cmd_val))
     subprocess.run(cmd_val, cwd=REPO_ROOT, check=True)
 
