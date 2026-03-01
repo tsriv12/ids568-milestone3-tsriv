@@ -20,7 +20,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Airflow constraints install (matches local approach)
           AIRFLOW_VERSION=2.9.3
           PYTHON_VERSION=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
           CONSTRAINT_URL="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
@@ -30,6 +29,7 @@ jobs:
       - name: Train
         run: |
           python train.py --experiment-name milestone3 --run-name "ci_run" --output-dir artifacts/ci_run
-- name: Validate (quality gate)
+
+      - name: Validate (quality gate)
         run: |
           python model_validation.py --metrics-path artifacts/ci_run/metrics.json --min-accuracy 0.80
