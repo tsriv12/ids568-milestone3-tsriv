@@ -56,18 +56,27 @@ def register_model(**kwargs):
     cmd_reg = [
         "python",
         "-c",
-        """
+                """
 import mlflow
 from mlflow.tracking import MlflowClient
+
+client = MlflowClient()
+model_name = "milestone3_model"
 
 exp = mlflow.get_experiment_by_name("milestone3")
 runs = mlflow.search_runs(experiment_ids=[exp.experiment_id]).sort_values("metrics.val_accuracy", ascending=False)
 best = runs.iloc[0]
-run_id = best["run_id"]
-model_name = "milestone3_model"
-model_uri = f"runs:/{run_id}/model.joblib"
+best_run_id = best["run_id"]
+model_uri = f"runs:/{best_run_id}/model.joblib"
 
-client = MlflowClient()
+# If Production already points to this run_id, skip (idempotent)
+prod_versions = client.get_latest_versions(model_name, stages=["Production"]) if True else []
+for v in prod_versions:
+    if getattr(v, "run_id", None) == best_run_id:
+        print(f"SKIP: {model_name} Production already at v{v.version} for run_id={best_run_id}")
+        raise SystemExit(0)
+
+# Ensure registered model exists
 try:
     client.create_registered_model(model_name)
 except Exception:
@@ -76,7 +85,7 @@ except Exception:
 mv = mlflow.register_model(model_uri, model_name)
 client.transition_model_version_stage(name=model_name, version=mv.version, stage="Staging", archive_existing_versions=False)
 client.transition_model_version_stage(name=model_name, version=mv.version, stage="Production", archive_existing_versions=False)
-print(f"Registered/promoted: {model_name} v{mv.version} from run_id={run_id}")
+print(f"Registered/promoted: {model_name} v{mv.version} from run_id={best_run_id}")
 """
     ]
     logging.info("Running MLflow register/promote")
