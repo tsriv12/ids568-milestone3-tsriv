@@ -17,7 +17,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 python train.py --experiment-name milestone3 --run-name local_run
-python model_validation.py --metrics-path artifacts/metrics.json --min-accuracy 0.80
+python model_validation.py --metrics-path artifacts/local_run/metrics.json --min-accuracy 0.80
 ```
 
 
