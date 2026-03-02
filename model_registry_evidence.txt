@@ -1,0 +1,32 @@
+MLflow Model Registry Evidence (version description + tags)
+
+Command used:
+python - <<'PY'
+from mlflow.tracking import MlflowClient
+client = MlflowClient()
+name = "milestone3_model"
+
+prod = client.get_latest_versions(name, stages=["Production"])[0]
+print("Production version:", prod.version)
+print("Production run_id:", prod.run_id)
+
+mv = client.get_model_version(name, prod.version)
+print("\nDescription:\n", mv.description)
+
+print("\nTags:")
+for k, v in sorted(mv.tags.items()):
+    print(f"{k} = {v}")
+PY
+
+Output:
+Production version: 7
+Production run_id: 3c8c00066982472ea4b6c5df08cb8bd9
+
+Description:
+Auto-registered by Airflow dag_run_id=manual__2026-03-02T06:09:32+00:00; source_run_id=3c8c00066982472ea4b6c5df08cb8bd9; metric=val_accuracy
+
+Tags:
+airflow_run_id = manual__2026-03-02T06:09:32+00:00
+gate = min_accuracy+regression
+metric = val_accuracy
+source_run_id = 3c8c00066982472ea4b6c5df08cb8bd9
