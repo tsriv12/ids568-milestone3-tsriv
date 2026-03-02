@@ -56,38 +56,9 @@ def register_model(**kwargs):
         "python",
         "-c",
                 """
-import mlflow
-from mlflow.tracking import MlflowClient
-from pathlib import Path
-
-client = MlflowClient()
-model_name = "milestone3_model"
-
-# Use the run_id produced by THIS DAG run (written by train.py)
-run_scope = Path(f"artifacts/{__import__('os').environ.get('M3_RUN_ID', 'airflow')}")
-rid_file = run_scope / "mlflow_run_id.txt"
-if not rid_file.exists():
-    raise SystemExit(f"ERROR: missing {rid_file}. Cannot do run-scoped registration.")
-
-run_id = rid_file.read_text().strip()
-model_uri = f"runs:/{run_id}/model.joblib"
-
-# Idempotent: if Production already points to this run_id, skip
-for v in client.get_latest_versions(model_name, stages=["Production"]):
-    if getattr(v, "run_id", None) == run_id:
-        print(f"SKIP: {model_name} Production already at v{v.version} for run_id={run_id}")
-        raise SystemExit(0)
-
-try:
-    client.create_registered_model(model_name)
-except Exception:
-    pass
-
-mv = mlflow.register_model(model_uri, model_name)
-client.transition_model_version_stage(name=model_name, version=mv.version, stage="Staging", archive_existing_versions=False)
-client.transition_model_version_stage(name=model_name, version=mv.version, stage="Production", archive_existing_versions=False)
-print(f"Registered/promoted: {model_name} v{mv.version} from run_id={run_id}")
-"""
+    Run-scoped register: validate artifacts/<run_id>/metrics.json, then register the model for THIS run_id
+    using artifacts/<run_id>/mlflow_run_id.txt and promote to Production (idempotent).
+    """
     ]
     logging.info("Running MLflow register/promote")
     subprocess.run(cmd_reg, cwd=REPO_ROOT, env=env, check=True)
