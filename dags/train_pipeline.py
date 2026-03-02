@@ -24,10 +24,7 @@ ARTIFACTS_DIR = os.path.join(REPO_ROOT, "artifacts")
 
 
 def preprocess_data(**kwargs):
-    """
-    For this milestone template, preprocessing is minimal and idempotent:
-    ensure artifacts directory exists and is clean for a fresh pipeline run.
-    """
+    """Idempotent preprocess: ensure the run-scoped artifacts directory exists."""
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     logging.info("Preprocess complete. artifacts_dir=%s", ARTIFACTS_DIR)
 
