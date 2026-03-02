@@ -1,0 +1,39 @@
+MLflow Evidence (run metadata + artifacts)
+
+Command used:
+python - <<'PY'
+from mlflow.tracking import MlflowClient
+client = MlflowClient()
+model_name = "milestone3_model"
+prod = client.get_latest_versions(model_name, stages=["Production"])
+run_id = prod[0].run_id
+print("Using Production run_id:", run_id)
+
+run = client.get_run(run_id)
+print("\nPARAMS:", run.data.params)
+print("\nMETRICS:", run.data.metrics)
+
+tags = run.data.tags
+sha_tags = {k:v for k,v in tags.items() if "sha256" in k.lower()}
+print("\nSHA TAGS:", sha_tags)
+print("\nTAG COUNT:", len(tags))
+
+print("\nARTIFACTS at root:")
+for f in client.list_artifacts(run_id, path=""):
+    print(" -", f.path, "(dir)" if f.is_dir else "")
+PY
+
+Output:
+Using Production run_id: 849c642ff9ba4c289dfb38629b800575
+
+PARAMS: {'seed': '42', 'max_iter': '200', 'C': '1.0'}
+
+METRICS: {'val_accuracy': 0.9666666666666667}
+
+SHA TAGS: {'artifact_sha256_model_joblib': 'ad350097c7ff3b2e22ae9316ce8882a1b8b72406059e20121ec0ada10a6a87c6', 'artifact_sha256_metrics_json': 'effd63a4472a914300c0850fe1ef34110a10184738b7af4ded6853d7aab67d5d'}
+
+TAG COUNT: 7
+
+ARTIFACTS at root:
+ - metrics.json
+ - model.joblib
