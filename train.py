@@ -75,7 +75,10 @@ def main():
 
     # MLflow logging
     mlflow.set_experiment(args.experiment_name)
-    with mlflow.start_run(run_name=args.run_name):
+    with mlflow.start_run(run_name=args.run_name) as run:
+        # Persist the MLflow run_id for downstream (Airflow register step)
+        (out_dir / "mlflow_run_id.txt").write_text(run.info.run_id)
+
         mlflow.log_param("C", args.C)
         mlflow.log_param("max_iter", args.max_iter)
         mlflow.log_param("seed", args.seed)
@@ -90,6 +93,7 @@ def main():
         mlflow.set_tag("artifact_sha256_metrics_json", metrics_sha256)
 
         # Print key outputs for Airflow/CI logs
+        print(f"mlflow_run_id={run.info.run_id}")
         print(f"val_accuracy={acc}")
         print(f"model_path={model_path.resolve()}")
         print(f"metrics_path={metrics_path.resolve()}")

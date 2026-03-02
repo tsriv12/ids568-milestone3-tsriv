@@ -47,7 +47,7 @@ def register_model(**kwargs):
     # 1) quality gate (fails task if below threshold)
     cmd_val = ["python", os.path.join(REPO_ROOT, "model_validation.py"), "--metrics-path", f"artifacts/{kwargs.get('run_id', 'airflow')}/metrics.json", "--min-accuracy", "0.80"]
     logging.info("Running: %s", " ".join(cmd_val))
-    subprocess.run(cmd_val, cwd=REPO_ROOT, check=True)
+    subprocess.run(cmd_val, cwd=REPO_ROOT, env=env, check=True)
 
     # 2) register + promote using MLflow API
     cmd_reg = [
@@ -56,24 +56,26 @@ def register_model(**kwargs):
                 """
 import mlflow
 from mlflow.tracking import MlflowClient
+from pathlib import Path
 
 client = MlflowClient()
 model_name = "milestone3_model"
 
-exp = mlflow.get_experiment_by_name("milestone3")
-runs = mlflow.search_runs(experiment_ids=[exp.experiment_id]).sort_values("metrics.val_accuracy", ascending=False)
-best = runs.iloc[0]
-best_run_id = best["run_id"]
-model_uri = f"runs:/{best_run_id}/model.joblib"
+# Use the run_id produced by THIS DAG run (written by train.py)
+run_scope = Path(f"artifacts/{__import__('os').environ.get('M3_RUN_ID', 'airflow')}")
+rid_file = run_scope / "mlflow_run_id.txt"
+if not rid_file.exists():
+    raise SystemExit(f"ERROR: missing {rid_file}. Cannot do run-scoped registration.")
 
-# If Production already points to this run_id, skip (idempotent)
-prod_versions = client.get_latest_versions(model_name, stages=["Production"]) if True else []
-for v in prod_versions:
-    if getattr(v, "run_id", None) == best_run_id:
-        print(f"SKIP: {model_name} Production already at v{v.version} for run_id={best_run_id}")
+run_id = rid_file.read_text().strip()
+model_uri = f"runs:/{run_id}/model.joblib"
+
+# Idempotent: if Production already points to this run_id, skip
+for v in client.get_latest_versions(model_name, stages=["Production"]):
+    if getattr(v, "run_id", None) == run_id:
+        print(f"SKIP: {model_name} Production already at v{v.version} for run_id={run_id}")
         raise SystemExit(0)
 
-# Ensure registered model exists
 try:
     client.create_registered_model(model_name)
 except Exception:
@@ -82,11 +84,11 @@ except Exception:
 mv = mlflow.register_model(model_uri, model_name)
 client.transition_model_version_stage(name=model_name, version=mv.version, stage="Staging", archive_existing_versions=False)
 client.transition_model_version_stage(name=model_name, version=mv.version, stage="Production", archive_existing_versions=False)
-print(f"Registered/promoted: {model_name} v{mv.version} from run_id={best_run_id}")
+print(f"Registered/promoted: {model_name} v{mv.version} from run_id={run_id}")
 """
     ]
     logging.info("Running MLflow register/promote")
-    subprocess.run(cmd_reg, cwd=REPO_ROOT, check=True)
+    subprocess.run(cmd_reg, cwd=REPO_ROOT, env=env, check=True)
 
 
 default_args = {
