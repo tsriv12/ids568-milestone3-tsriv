@@ -21,6 +21,15 @@ def on_failure_callback(context):
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ARTIFACTS_DIR = os.path.join(REPO_ROOT, "artifacts")
+def _run_id(kwargs):
+    ti = kwargs.get("ti")
+    if ti and getattr(ti, "dag_run", None):
+        return ti.dag_run.run_id
+    return kwargs.get("run_id", "airflow")
+
+
+
+
 
 
 def preprocess_data(**kwargs):
@@ -34,20 +43,20 @@ def train_model(**kwargs):
     Calls train.py. Idempotency: overwrites artifacts/ for this run.
     """
     env = os.environ.copy()
-    cmd = ["python", os.path.join(REPO_ROOT, "train.py"), "--experiment-name", "milestone3", "--run-name", "airflow_run", "--output-dir", f"artifacts/{kwargs.get('run_id', 'airflow')}" ]
+    cmd = ["python", os.path.join(REPO_ROOT, "train.py"), "--experiment-name", "milestone3", "--run-name", "airflow_run", "--output-dir", f"artifacts/{_run_id(kwargs)}" ]
     logging.info("Running: %s", " ".join(cmd))
     subprocess.run(cmd, cwd=REPO_ROOT, env=env, check=True)
 
 
 def register_model(**kwargs):
     env = os.environ.copy()
-    env["M3_RUN_ID"] = kwargs.get("run_id", "airflow")
+    env["M3_RUN_ID"] = _run_id(kwargs)
     """
     Runs validation gate, then registers and promotes best run to Production.
     For simplicity, we register the last run that 'train.py' created via MLflow search.
     """
     # 1) quality gate (fails task if below threshold)
-    cmd_val = ["python", os.path.join(REPO_ROOT, "model_validation.py"), "--metrics-path", f"artifacts/{kwargs.get('run_id', 'airflow')}/metrics.json", "--min-accuracy", "0.80"]
+    cmd_val = ["python", os.path.join(REPO_ROOT, "model_validation.py"), "--metrics-path",f"artifacts/{_run_id(kwargs)}/metrics.json" , "--min-accuracy", "0.80"]
     logging.info("Running: %s", " ".join(cmd_val))
     subprocess.run(cmd_val, cwd=REPO_ROOT, env=env, check=True)
 
@@ -62,19 +71,24 @@ from mlflow.tracking import MlflowClient
 client = MlflowClient()
 model_name = "milestone3_model"
 
-exp = mlflow.get_experiment_by_name("milestone3")
-if exp is None:
-    raise SystemExit("ERROR: MLflow experiment 'milestone3' not found")
 
-runs = mlflow.search_runs(experiment_ids=[exp.experiment_id]).sort_values(
-    "metrics.val_accuracy", ascending=False
-)
-if len(runs) == 0:
-    raise SystemExit("ERROR: No runs found in experiment 'milestone3'")
+import os
+from pathlib import Path
+import mlflow
+from mlflow.tracking import MlflowClient
 
-best = runs.iloc[0]
-best_run_id = best["run_id"]
-model_uri = f"runs:/{best_run_id}/model.joblib"
+client = MlflowClient()
+model_name = "milestone3_model"
+
+airflow_run_id = os.environ.get("M3_RUN_ID", "airflow")
+runid_path = Path("artifacts") / airflow_run_id / "mlflow_run_id.txt"
+if not runid_path.exists():
+    raise SystemExit(f"ERROR: missing {runid_path}")
+
+run_id = runid_path.read_text().strip()
+model_uri = f"runs:/{run_id}/model.joblib"
+
+
 
 # Ensure registered model exists
 try:
@@ -84,8 +98,8 @@ except Exception:
 
 # Idempotent: if Production already points to this run_id, skip
 for v in client.get_latest_versions(model_name, stages=["Production"]):
-    if getattr(v, "run_id", None) == best_run_id:
-        print(f"SKIP: Production already at v{v.version} for run_id={best_run_id}")
+    if getattr(v, "run_id", None) == run_id:
+        print(f"SKIP: Production already at v{v.version} for run_id={run_id}")
         raise SystemExit(0)
 
 mv = mlflow.register_model(model_uri, model_name)
