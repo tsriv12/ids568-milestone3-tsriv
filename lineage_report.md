@@ -14,7 +14,7 @@ Each run logs:
 - **Metric**: `val_accuracy`
 - **Artifacts**: trained model (`model.joblib`) and metrics file (`metrics.json`)
 
-A comparison table of runs is included in: `run_comparison.csv`.
+A comparison table of runs is included in: `Evidences/run_comparison.csv`.
 
 ## 3) Candidate selection
 The production candidate was selected using:

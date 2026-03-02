@@ -6,7 +6,7 @@
 - `train.py` — training script (logs to MLflow)
 - `model_validation.py` — threshold-based validation gate
 - `requirements.txt` — pinned dependencies
-- `run_comparison.csv` — MLflow run comparison export
+- `Evidences/run_comparison.csv` — MLflow run comparison export
 - `lineage_report.md` — experiment/registry lineage report
 
 ## Run training + validation locally (no Airflow)
@@ -38,7 +38,7 @@ python model_validation.py --metrics-path artifacts/local_run/metrics.json --min
 - Lineage is captured via:
   - MLflow experiment runs (params/metrics/artifacts)
   - Model Registry version history (Staging/Production transitions)
-  - `run_comparison.csv` + `lineage_report.md`
+  - `Evidences/run_comparison.csv` + `lineage_report.md`
 
 ### CI-based model governance approach
 - PR/commit changes must pass:
