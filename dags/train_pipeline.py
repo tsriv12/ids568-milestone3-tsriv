@@ -40,6 +40,8 @@ def train_model(**kwargs):
 
 
 def register_model(**kwargs):
+    env = os.environ.copy()
+    env["M3_RUN_ID"] = kwargs.get("run_id", "airflow")
     """
     Runs validation gate, then registers and promotes best run to Production.
     For simplicity, we register the last run that 'train.py' created via MLflow search.
