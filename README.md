@@ -1,70 +1,121 @@
+cd /home/extramural_cl_000647/ids568-milestone3-tsriv && cat > README.md <<'MD'
 # IDS568 Milestone 3
 
-## Repo structure (expected)
-- `.github/workflows/train_and_validate.yml` — CI pipeline (train + validate gate)
-- `dags/train_pipeline.py` — Airflow DAG (`preprocess_data -> train_model -> register_model`)
-- `train.py` — training script (logs to MLflow)
-- `model_validation.py` — threshold-based validation gate
+This repository implements an end-to-end MLOps workflow using **Airflow** for orchestration, **MLflow** for experiment tracking + model registry, and **GitHub Actions** for CI-based training + validation gates.
+
+---
+
+## Repo structure (deliverables)
+- `.github/workflows/train_and_validate.yml` — CI pipeline (train + validation gate)
+- `dags/train_pipeline.py` — Airflow DAG: `preprocess_data -> train_model -> register_model`
+- `train.py` — training script (logs params/metrics/artifacts to MLflow; writes run-scoped artifacts)
+- `model_validation.py` — validation gate (absolute threshold + regression vs baseline)
 - `requirements.txt` — pinned dependencies
-- `Evidences/run_comparison.csv` — MLflow run comparison export
-- `lineage_report.md` — experiment/registry lineage report
+- `lineage_report.md` — experiment + registry lineage report
+- `Evidences/`
+  - `run_comparison.csv` — MLflow run comparison export
+  - `baseline_metrics.json` — baseline metric used for regression gate
+  - `mlflow_evidence.txt` — proof of MLflow params/metrics/tags/artifacts
+  - `model_registry_evidence.txt` — proof of model version tags + description in registry
 
-## Run training + validation locally (no Airflow)
+---
+
+## What the pipeline does
+1) **Train**
+   - Trains a model and logs to MLflow:
+     - params: `C`, `max_iter`, `seed`
+     - metric: `val_accuracy`
+     - artifacts: `model.joblib`, `metrics.json`
+     - tags: SHA256 hashes for artifacts
+2) **Validate**
+   - Enforces a quality gate:
+     - absolute threshold: `min_accuracy`
+     - regression gate vs baseline: `baseline_metrics.json` with `max_regression`
+3) **Register + Promote**
+   - Registers the model produced by the **current Airflow DAG run** (run-scoped using `mlflow_run_id.txt`)
+   - Adds **model version description + tags** in the MLflow Model Registry
+   - Promotes the new version through **Staging → Production**
+   - Safe on retries for the same DAG run (won’t re-promote the same MLflow run_id)
+
+---
+
+## Airflow orchestration
+
+### DAG: `train_pipeline`
+File: `dags/train_pipeline.py`
+
+Tasks:
+- `preprocess_data`  
+  Ensures the artifacts directory exists.
+- `train_model`  
+  Executes `train.py` and writes outputs to a **run-scoped directory**:
+  - `artifacts/<dag_run_id>/model.joblib`
+  - `artifacts/<dag_run_id>/metrics.json`
+  - `artifacts/<dag_run_id>/mlflow_run_id.txt` (MLflow run_id for that DAG run)
+- `register_model`  
+  1) validates `artifacts/<dag_run_id>/metrics.json` via `model_validation.py`  
+  2) reads `artifacts/<dag_run_id>/mlflow_run_id.txt` to identify the MLflow run tied to this DAG run  
+  3) registers `runs:/<mlflow_run_id>/model.joblib` into MLflow Model Registry  
+  4) adds model version description + tags  
+  5) promotes the version to **Staging** then **Production**
+
+Trigger the DAG:
 ```bash
-python3 -m venv .venv-m3
-source .venv-m3/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+airflow dags trigger train_pipeline
+airflow dags list-runs -d train_pipeline --no-backfill --output table | head -n 5
 
-python train.py --experiment-name milestone3 --run-name local_run
-python model_validation.py --metrics-path artifacts/local_run/metrics.json --min-accuracy 0.80
-```
+###CI/CD model governance (GitHub Actions)
+Workflow: .github/workflows/train_and_validate.yml
+On each push to main, CI:
+1) installs dependencies
+2) trains a model
+3) runs model_validation.py as a quality gate:
+  a) must satisfy min_accuracy
+  b) must not regress beyond max_regression vs Evidences/baseline_metrics.json
+If the gate fails, CI fails.
 
+###Idempotency + reproducibility
+Run-scoped artifacts
+Each Airflow run writes to:
+  artifacts/<dag_run_id>/...
+This prevents different DAG runs from overwriting each other’s outputs.
 
-## Operational Notes (required checklist items)
+###Safe on retries
+register_model checks whether Production already points to the same MLflow run_id and exits early if so.
+This prevents duplicate promotions during task retries for the same DAG run.
 
-### Architecture (how the pieces fit)
-- **Airflow DAG**: `dags/train_pipeline.py` orchestrates three PythonOperator tasks.
-- **Training**: `train.py` trains a model and logs params/metrics/artifacts to MLflow.
-- **Validation gate**: `model_validation.py` enforces a minimum metric threshold and exits non-zero on failure.
-- **Registry**: the DAG registers the best MLflow run’s model into the MLflow Model Registry and promotes it through stages.
-- **CI governance**: `.github/workflows/train_and_validate.yml` runs training + validation on every push to `main`.
+###Artifact hashing (reproducibility)
+Each training run computes SHA256 hashes and logs them as MLflow tags:
+a) artifact_sha256_model_joblib
+b) artifact_sha256_metrics_json
 
-### Idempotency + lineage guarantees
-- The DAG uses **run-scoped artifact directories**: `artifacts/<run_id>/...` so re-runs do not overwrite prior outputs.
-- Each training run logs **artifact SHA256 hashes** to MLflow tags for reproducibility:
-  - `artifact_sha256_model_joblib`
-  - `artifact_sha256_metrics_json`
-- Lineage is captured via:
-  - MLflow experiment runs (params/metrics/artifacts)
-  - Model Registry version history (Staging/Production transitions)
-  - `Evidences/run_comparison.csv` + `lineage_report.md`
+###MLflow tracking + model registry
 
-### CI-based model governance approach
-- PR/commit changes must pass:
-  1) training execution
-  2) validation threshold gate (`model_validation.py`)
-- If validation fails, CI fails and blocks “good” code from landing unnoticed.
+##Experiment tracking
+Experiment name: milestone3
+Logged per run:
+a) params: C, max_iter, seed
+b) metric: val_accuracy
+c) artifacts: model.joblib, metrics.json
+d) tags: artifact SHA256 hashes
 
-### Experiment tracking methodology
-- Experiments are tracked under MLflow experiment name: `milestone3`
-- Logged items:
-  - Params: `C`, `max_iter`, `seed`
-  - Metric: `val_accuracy`
-  - Artifacts: `model.joblib`, `metrics.json`
-  - Tags: SHA256 hashes for artifacts
+##Model registry
+Registered model name: milestone3_model
+During registration, the DAG adds:
+1) model version description (includes Airflow dag_run_id + MLflow run_id)
+2) model version tags:
+  a) source_run_id
+  b) airflow_run_id
+  c) metric
+  d) gate
 
-### Retry strategy + failure handling
-- Airflow `default_args` include retries + retry_delay.
-- `on_failure_callback` logs the failing DAG/task/run_id for debugging.
+###Monitoring / alerting recommendations
+1) Monitor production performance metrics and drift indicators.
+2) Alert on sustained degradation vs baseline performance.
+3) Track feature distribution shifts and retrain when drift exceeds thresholds.
 
-### Monitoring/alerting recommendations
-- Monitor model performance metrics in production (accuracy proxy, drift signals).
-- Alert on sustained degradation vs the Production baseline.
-- Track input data drift (feature distribution shifts) and retrain when drift exceeds thresholds.
-
-### Rollback procedure
-- In MLflow Model Registry:
-  - Demote the current Production version (or archive it)
-  - Promote the last known-good version to Production
-- Document the reason for rollback and the run_id/version used.
+###Rollback procedure
+If Production performance degrades:
+1) In MLflow Model Registry, identify the last known-good Production version.
+2) Promote that version back to Production (and demote/archive the current one if needed).
+3) Record the rollback reason and the version/run_id selected.
