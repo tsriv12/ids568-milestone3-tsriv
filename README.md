@@ -62,11 +62,10 @@ Tasks:
 
 ## Trigger the DAG
 
-```bash
+````bash
 airflow dags trigger train_pipeline
 airflow dags list-runs -d train_pipeline --no-backfill --output table | head -n 5
-```
-
+````
 ---
 
 ## CI/CD model governance (GitHub Actions)
@@ -144,9 +143,9 @@ If Production performance degrades:
 
 ## Update README in git
 
-```bash
+````bash
 cd /home/extramural_cl_000647/ids568-milestone3-tsriv
 git add README.md
 git commit -m "Update README for final submission"
 git push
-```
+````
