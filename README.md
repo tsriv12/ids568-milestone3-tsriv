@@ -58,76 +58,95 @@ Tasks:
   3) registers `runs:/<mlflow_run_id>/model.joblib` into MLflow Model Registry  
   4) adds model version description + tags  
   5) promotes the version to **Staging** then **Production**
-
 ---
 
-Trigger the DAG:
+## Trigger the DAG
+
 ```bash
 airflow dags trigger train_pipeline
 airflow dags list-runs -d train_pipeline --no-backfill --output table | head -n 5
+```
 
 ---
-###CI/CD model governance (GitHub Actions)
-Workflow: .github/workflows/train_and_validate.yml
-On each push to main, CI:
-1) installs dependencies
-2) trains a model
-3) runs model_validation.py as a quality gate:
-  a) must satisfy min_accuracy
-  b) must not regress beyond max_regression vs Evidences/baseline_metrics.json
+
+## CI/CD model governance (GitHub Actions)
+
+Workflow: `.github/workflows/train_and_validate.yml`
+
+On each push to `main`, CI:
+1) Installs dependencies
+2) Trains a model
+3) Runs `model_validation.py` as a quality gate:
+   - Must satisfy `min_accuracy`
+   - Must not regress beyond `max_regression` vs `Evidences/baseline_metrics.json`
+
 If the gate fails, CI fails.
 
-###Idempotency + reproducibility
-Run-scoped artifacts
+---
+
+## Idempotency + reproducibility
+
+### Run-scoped artifacts
 Each Airflow run writes to:
-  artifacts/<dag_run_id>/...
+- `artifacts/<dag_run_id>/...`
+
 This prevents different DAG runs from overwriting each other’s outputs.
 
-###Safe on retries
-register_model checks whether Production already points to the same MLflow run_id and exits early if so.
+### Safe on retries
+`register_model` checks whether Production already points to the same MLflow `run_id` and exits early if so.  
 This prevents duplicate promotions during task retries for the same DAG run.
 
-###Artifact hashing (reproducibility)
+### Artifact hashing (reproducibility)
 Each training run computes SHA256 hashes and logs them as MLflow tags:
-a) artifact_sha256_model_joblib
-b) artifact_sha256_metrics_json
+- `artifact_sha256_model_joblib`
+- `artifact_sha256_metrics_json`
 
-###MLflow tracking + model registry
+---
 
-##Experiment tracking
-Experiment name: milestone3
+## MLflow tracking + model registry
+
+### Experiment tracking
+Experiment name: `milestone3`
+
 Logged per run:
-a) params: C, max_iter, seed
-b) metric: val_accuracy
-c) artifacts: model.joblib, metrics.json
-d) tags: artifact SHA256 hashes
+- Params: `C`, `max_iter`, `seed`
+- Metric: `val_accuracy`
+- Artifacts: `model.joblib`, `metrics.json`
+- Tags: artifact SHA256 hashes
 
-##Model registry
-Registered model name: milestone3_model
+### Model registry
+Registered model name: `milestone3_model`
+
 During registration, the DAG adds:
-1) model version description (includes Airflow dag_run_id + MLflow run_id)
-2) model version tags:
-  a) source_run_id
-  b) airflow_run_id
-  c) metric
-  d) gate
+1) Model version description (includes Airflow `dag_run_id` + MLflow `run_id`)
+2) Model version tags:
+   - `source_run_id`
+   - `airflow_run_id`
+   - `metric`
+   - `gate`
 
-###Monitoring / alerting recommendations
+---
+
+## Monitoring / alerting recommendations
 1) Monitor production performance metrics and drift indicators.
 2) Alert on sustained degradation vs baseline performance.
 3) Track feature distribution shifts and retrain when drift exceeds thresholds.
 
-###Rollback procedure
+---
+
+## Rollback procedure
 If Production performance degrades:
 1) In MLflow Model Registry, identify the last known-good Production version.
 2) Promote that version back to Production (and demote/archive the current one if needed).
 3) Record the rollback reason and the version/run_id selected.
 
+---
 
+## Update README in git
 
 ```bash
 cd /home/extramural_cl_000647/ids568-milestone3-tsriv
-head -n 20 README.md
 git add README.md
 git commit -m "Update README for final submission"
 git push
+```
