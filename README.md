@@ -1,4 +1,3 @@
-cd /home/extramural_cl_000647/ids568-milestone3-tsriv && cat > README.md <<'MD'
 # IDS568 Milestone 3
 
 This repository implements an end-to-end MLOps workflow using **Airflow** for orchestration, **MLflow** for experiment tracking + model registry, and **GitHub Actions** for CI-based training + validation gates.
