@@ -119,3 +119,12 @@ If Production performance degrades:
 1) In MLflow Model Registry, identify the last known-good Production version.
 2) Promote that version back to Production (and demote/archive the current one if needed).
 3) Record the rollback reason and the version/run_id selected.
+
+
+
+```bash
+cd /home/extramural_cl_000647/ids568-milestone3-tsriv
+head -n 20 README.md
+git add README.md
+git commit -m "Update README for final submission"
+git push
