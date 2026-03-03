@@ -59,11 +59,14 @@ Tasks:
   4) adds model version description + tags  
   5) promotes the version to **Staging** then **Production**
 
+---
+
 Trigger the DAG:
 ```bash
 airflow dags trigger train_pipeline
 airflow dags list-runs -d train_pipeline --no-backfill --output table | head -n 5
 
+---
 ###CI/CD model governance (GitHub Actions)
 Workflow: .github/workflows/train_and_validate.yml
 On each push to main, CI:
